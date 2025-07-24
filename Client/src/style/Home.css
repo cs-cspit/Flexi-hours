@@ -1,0 +1,106 @@
+/* Layout */
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f6fa;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.sidebar {
+  width: 250px;
+  background-color: #2c3e50;
+  color: white;
+  padding: 2rem 1rem;
+}
+
+.sidebar h2 {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  border-bottom: 2px solid #ecf0f1;
+  padding-bottom: 1rem;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  padding: 12px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: 0.2s;
+}
+
+.sidebar li:hover {
+  background-color: #34495e;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 2rem;
+}
+
+.welcome-card {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+}
+
+.welcome-card h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Timer */
+.timer-card {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.timer-display {
+  font-size: 3rem;
+  font-weight: bold;
+  margin: 1rem 0 2rem;
+  color: #2c3e50;
+}
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 20px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn.start {
+  background-color: #27ae60;
+}
+
+.btn.pause {
+  background-color: #f39c12;
+}
+
+.btn.stop {
+  background-color: #c0392b;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+}
