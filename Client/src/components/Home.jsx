@@ -1,10 +1,34 @@
-import React, { useState, useEffect } from "react";
+// src/pages/Home.jsx
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import "../style/Home.css";
 
 const Home = () => {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [userName, setUserName] = useState("");
+  const navigate = useNavigate();
+
+  const dropdownRef = useRef();
+
+  useEffect(() => {
+    const storedName = localStorage.getItem("username");
+    setUserName(storedName || "User");
+    console.log("Fetched username:", localStorage.getItem("username"));
+
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     let interval;
@@ -28,8 +52,12 @@ const Home = () => {
   const handleStop = () => {
     setIsRunning(false);
     setIsPaused(false);
-    setTime(0); // reset timer
-    // You can log time, date, user info here
+    setTime(0);
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/login");
   };
 
   const formatTime = (seconds) => {
@@ -48,37 +76,52 @@ const Home = () => {
       <div className="sidebar">
         <h2>FlexiHours</h2>
         <ul>
-          <li>Home</li>
           <li>My Tasks</li>
-          <li>Timer</li>
-          <li>Reports</li>
-          <li>Logout</li>
+          <li>Todays Earnings</li>
+          <li>Monthly earnings</li>
+          <li>About Us</li>
+          <li onClick={handleLogout}>Logout</li>
         </ul>
       </div>
 
       <div className="main-content">
+        <nav className="navbar">
+          <div className="navbar-left">
+            </div>
+          <div className="navbar-right">
+            <div className="timer-card profile-size">
+              <div className="timer-display">{formatTime(time)}</div>
+              <div className="button-group">
+                <button className="btn start" onClick={handleStart}>Start</button>
+                <button className="btn pause" onClick={handlePause}>Pause</button>
+                <button className="btn stop" onClick={handleStop}>Stop</button>
+              </div>
+            </div>
+
+            <div className="profile-wrapper" ref={dropdownRef}>
+              <div className="profile-circle" onClick={() => setShowDropdown(!showDropdown)}>
+                <img
+                  src={`https://ui-avatars.com/api/?name=${userName}&background=007bff&color=fff&size=64`}
+                  alt="Profile"
+                />
+              </div>
+              {showDropdown && (
+                <div className="profile-dropdown">
+                  <div className="profile-name">{userName}</div>
+                  <button className="btn logout" onClick={handleLogout}>Logout</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </nav>
+
         <div className="welcome-card">
           <h1>Welcome back, Employee!</h1>
           <p>Track your tasks and working hours easily.</p>
         </div>
-
-        <div className="timer-card">
-          <h2>Task Timer</h2>
-          <div className="timer-display">{formatTime(time)}</div>
-          <div className="button-group">
-            <button className="btn start" onClick={handleStart}>
-              Start
-            </button>
-            <button className="btn pause" onClick={handlePause}>
-              Pause
-            </button>
-            <button className="btn stop" onClick={handleStop}>
-              Stop
-            </button>
-          </div>
-        </div>
       </div>
     </div>
+    
   );
 };
 

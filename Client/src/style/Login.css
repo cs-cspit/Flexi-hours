@@ -1,25 +1,24 @@
 body {
-  background: #f8f9fa;
+  background: url('../../laptop-2838921_1920.jpg') no-repeat center center fixed;
+  background-size: cover;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-  /* Center the card and add backdrop for readability */
-.card {
+.login-container {
   border-radius: 12px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.08);
   transition: box-shadow 0.3s;
-  background: rgba(255,255,255,0.0);
-  backdrop-filter: blur(2px);
   padding: 2rem 2.5rem;
   max-width: 400px;
   width: 100%;
   margin: auto;
+  background: rgba(255,255,255,0.7);
 }
 
-.card:hover {
+.login-container:hover {
   box-shadow: 0 8px 32px rgba(0,0,0,0.16);
 }
 
@@ -59,7 +58,58 @@ button:hover {
 .form-link {
   color: #007bff;
   text-decoration: none;
+}
+
+.login-container:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+.form-control {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus,
+.form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.15);
+  outline: none;
+}
+
+button,
+.btn-primary {
+  background: linear-gradient(90deg, #007bff 0%, #00c6ff 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+button:hover,
+.btn-primary:hover {
+  background: linear-gradient(90deg, #0056b3 0%, #00aaff 100%);
+  transform: translateY(-2px) scale(1.03);
+}
+
+.form-link {
+  color: #007bff;
+  text-decoration: none;
   transition: color 0.2s;
+}
+
+.form-link:hover {
+  color: #0056b3;
+  text-decoration: underline;
 }
 
 .form-link:hover {

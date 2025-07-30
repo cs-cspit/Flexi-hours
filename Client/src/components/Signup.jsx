@@ -42,8 +42,8 @@ function Signup() {
   };
 
   return (
-    <div className="container d-flex justify-content-center align-items-center min-vh-100">
-      <div className="card shadow p-4" style={{ width: "100%", maxWidth: "400px" }}>
+    <div className="container">
+      <div className="card">
         <h2 className="text-center mb-4">FlexiHours Signup</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group mb-3">

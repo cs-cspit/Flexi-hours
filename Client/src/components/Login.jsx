@@ -1,5 +1,6 @@
 // src/pages/Login.jsx
 import React, { useState } from 'react';
+import '../style/Login.css';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,16 +17,21 @@ function Login() {
     e.preventDefault();
     try {
       const res = await axios.post('http://localhost:5000/api/auth/login', form);
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('userId', res.data.userId);
-      navigate('/home'); // Redirect after successful login
+      const { token, userId, username } = res.data;
+
+      // Store necessary info in localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('userId', userId);
+      localStorage.setItem('username', username); // Store name for UI
+
+      navigate('/home'); // Redirect to homepage
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     }
   };
 
   return (
-    <div className="container mt-5" style={{ maxWidth: '400px' }}>
+    <div className="login-container">
       <h2 className="mb-4 text-center">Login</h2>
       {error && <div className="alert alert-danger">{error}</div>}
       <form onSubmit={handleLogin}>
