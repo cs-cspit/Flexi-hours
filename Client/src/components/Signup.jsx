@@ -4,7 +4,7 @@ import '../style/Signup.css';
 
 
 function Signup() {
-  const [form, setForm] = useState({ username: "", email: "", password: "" });
+  const [form, setForm] = useState({ username: "", email: "", password: "", role: "employee" });
   const [message, setMessage] = useState("");
   const navigate = useNavigate(); // ✅ initialize navigation
 
@@ -14,13 +14,13 @@ function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { username, email, password } = form;
+    const { username, email, password, role } = form;
 
     try {
       const res = await fetch("http://localhost:5000/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, email, password, role }),
       });
 
       const data = await res.json();

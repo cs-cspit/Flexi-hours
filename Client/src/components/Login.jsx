@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import '../style/Login.css';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import Signup from './Signup';
 
 function Login() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ email: '', password: '', role: '' });
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
@@ -17,14 +18,23 @@ function Login() {
     e.preventDefault();
     try {
       const res = await axios.post('http://localhost:5000/api/auth/login', form);
-      const { token, userId, username } = res.data;
+      const { token, userId, username, role } = res.data;
 
       // Store necessary info in localStorage
       localStorage.setItem('token', token);
       localStorage.setItem('userId', userId);
       localStorage.setItem('username', username); // Store name for UI
+      localStorage.setItem('role', role); // Store role for UI
 
-      navigate('/home'); // Redirect to homepage
+      if (role === 'employee') {
+        navigate('/home');
+      } else if (role === 'senior_employee') {
+        navigate('/seniorhome');
+      } else if (role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
     }
@@ -56,6 +66,21 @@ function Login() {
             onChange={handleChange}
             required
           />
+        </div>
+        <div className="form-group mb-4">
+          <label>Role</label>
+          <select
+            className="form-control"
+            name="role"
+            value={form.role}
+            onChange={handleChange}
+            required
+          >
+            <option value="">Select Role</option>
+            <option value="employee">Employee</option>
+            <option value="senior_employee">Senior Employee</option>
+            <option value="admin">Admin</option>
+          </select>
         </div>
         <button type="submit" className="btn btn-primary w-100">Login</button>
         <p className="mt-3 text-center">
