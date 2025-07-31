@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import '../style/Signup.css';
+// import './style/Login.css';
 
 
 function Signup() {
-  const [form, setForm] = useState({ username: "", email: "", password: "", role: "employee" });
+  const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [message, setMessage] = useState("");
   const navigate = useNavigate(); // ✅ initialize navigation
 
@@ -14,13 +15,13 @@ function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { username, email, password, role } = form;
+    const { username, email, password } = form;
 
     try {
       const res = await fetch("http://localhost:5000/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password, role }),
+        body: JSON.stringify({ username, email, password }),
       });
 
       const data = await res.json();
@@ -42,21 +43,21 @@ function Signup() {
   };
 
   return (
-    <div className="container">
-      <div className="card">
+    <div className="container d-flex justify-content-center align-items-center min-vh-100">
+      <div className="card shadow p-4" style={{ width: "100%", maxWidth: "400px" }}>
         <h2 className="text-center mb-4">FlexiHours Signup</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group mb-3">
             <label>Username</label>
-            <input type="text" name="username" className="form-control" onChange={handleChange} required />
+            <input type="text" name="username" placeholder="Enter Username" className="form-control" onChange={handleChange} required />
           </div>
           <div className="form-group mb-3">
             <label>Email</label>
-            <input type="email" name="email" className="form-control" onChange={handleChange} required />
+            <input type="email" name="email"placeholder="Enter Email" className="form-control" onChange={handleChange} required />
           </div>
           <div className="form-group mb-4">
             <label>Password</label>
-            <input type="password" name="password" className="form-control" onChange={handleChange} required />
+            <input type="password" name="password"  placeholder="Enter Password" className="form-control" onChange={handleChange} required />
           </div>
           <button type="submit" className="btn btn-primary w-100">Create Account</button>
         </form>
