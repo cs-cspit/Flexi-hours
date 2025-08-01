@@ -9,15 +9,16 @@ const Home = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const navigate = useNavigate();
 
   const dropdownRef = useRef();
 
   useEffect(() => {
     const storedName = localStorage.getItem("username");
+    const storedEmail = localStorage.getItem("email");
     setUserName(storedName || "User");
-    console.log("Fetched username:", localStorage.getItem("username"));
-
+    setUserEmail(storedEmail || "");
   }, []);
 
   useEffect(() => {
@@ -101,13 +102,13 @@ const Home = () => {
             <div className="profile-wrapper" ref={dropdownRef}>
               <div className="profile-circle" onClick={() => setShowDropdown(!showDropdown)}>
                 <img
-                  src={`https://ui-avatars.com/api/?name=${userName}&background=007bff&color=fff&size=64`}
+                  src={`user.png`}
                   alt="Profile"
                 />
               </div>
               {showDropdown && (
                 <div className="profile-dropdown">
-                  <div className="profile-name">{userName}</div>
+                  <div className="profile-email" style={{ marginBottom: "1rem" }}>Your Email: {userEmail}</div>
                   <button className="btn logout" onClick={handleLogout}>Logout</button>
                 </div>
               )}

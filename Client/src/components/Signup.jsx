@@ -2,11 +2,10 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import '../style/Signup.css';
 
-
 function Signup() {
   const [form, setForm] = useState({ username: "", email: "", password: "", role: "employee" });
   const [message, setMessage] = useState("");
-  const navigate = useNavigate(); // ✅ initialize navigation
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -24,14 +23,12 @@ function Signup() {
       });
 
       const data = await res.json();
-      console.log("Server response:", res.status, data);
-
       if (res.status === 201) {
         alert("Signup successful!");
-        navigate("/login"); // ✅ success: go to login
+        navigate("/login");
       } else if (res.status === 409 || data.message === "User already exists") {
         alert("User already exists! Redirecting to login...");
-        navigate("/login"); // ✅ user exists: go to login
+        navigate("/login");
       } else {
         setMessage(data.message || "Something went wrong");
       }
@@ -42,9 +39,9 @@ function Signup() {
   };
 
   return (
-    <div className="container">
-      <div className="card">
-        <h2 className="text-center mb-4">FlexiHours Signup</h2>
+    <div className="signup-container">
+      <div className="signup-card">
+        <h2 className="text-center mb-4">Signup</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group mb-3">
             <label>Username</label>

@@ -1,26 +1,32 @@
 body {
-  background: #f8f9fa;
-  min-height: 100vh;
+  background: url('/your-background.jpg') no-repeat center center fixed;
+  background-size: cover;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
 }
 
-  /* Center the card and add backdrop for readability */
-.card {
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-  transition: box-shadow 0.3s;
-  background: rgba(255,255,255,0.0);
-  backdrop-filter: blur(2px);
-  padding: 2rem 2.5rem;
-  max-width: 400px;
+.signup-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
-  margin: auto;
+  min-height: 100vh;
+  padding: 2rem;
 }
 
-.card:hover {
-  box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+.signup-card {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  padding: 3rem;
+  max-width: 500px;
+  width: 100%;
+  backdrop-filter: blur(4px);
 }
 
 input[type="text"],
@@ -31,12 +37,12 @@ input[type="password"] {
   margin-bottom: 1rem;
   border: 1px solid #ced4da;
   border-radius: 8px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  font-size: 1rem;
 }
 
 input:focus {
   border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,0.15);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
   outline: none;
 }
 
@@ -45,24 +51,12 @@ button {
   color: #fff;
   border: none;
   border-radius: 8px;
-  padding: 0.75rem 2rem;
+  padding: 0.75rem;
   font-size: 1rem;
   cursor: pointer;
-  transition: background 0.3s, transform 0.2s;
+  transition: background 0.3s ease;
 }
 
 button:hover {
   background: linear-gradient(90deg, #0056b3 0%, #00aaff 100%);
-  transform: translateY(-2px) scale(1.03);
-}
-
-.form-link {
-  color: #007bff;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.form-link:hover {
-  color: #0056b3;
-  text-decoration: underline;
 }
