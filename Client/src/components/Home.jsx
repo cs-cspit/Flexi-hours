@@ -1,7 +1,10 @@
 // src/pages/Home.jsx
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import "../style/Home.css";
+
 
 const Home = () => {
   const [time, setTime] = useState(0);
@@ -10,15 +13,30 @@ const Home = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [myTasks, setMyTasks] = useState([]);
   const navigate = useNavigate();
 
   const dropdownRef = useRef();
+
 
   useEffect(() => {
     const storedName = localStorage.getItem("username");
     const storedEmail = localStorage.getItem("email");
     setUserName(storedName || "User");
     setUserEmail(storedEmail || "");
+  }, []);
+
+  // Fetch tasks assigned to this employee
+  useEffect(() => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+    axios.get("http://localhost:5000/api/tasks")
+      .then(res => {
+        // Only show tasks assigned to this user
+        const assigned = res.data.tasks.filter(task => task.assignedTo?._id === userId);
+        setMyTasks(assigned);
+      })
+      .catch(err => console.error("Failed to fetch tasks", err));
   }, []);
 
   useEffect(() => {
@@ -119,6 +137,23 @@ const Home = () => {
         <div className="welcome-card">
           <h1>Welcome back, Employee!</h1>
           <p>Track your tasks and working hours easily.</p>
+
+          <div className="my-tasks-section mt-4">
+            <h2>My Tasks</h2>
+            {myTasks.length === 0 ? (
+              <p>No tasks assigned to you yet.</p>
+            ) : (
+              <div className="list-group">
+                {myTasks.map(task => (
+                  <div className="list-group-item" key={task._id}>
+                    <div><strong>Task:</strong> {task.description}</div>
+                    <div><strong>Assigned By:</strong> {task.assignedBy?.firstName} {task.assignedBy?.lastName} ({task.assignedBy?.email})</div>
+                    <div><small>{new Date(task.createdAt).toLocaleString()}</small></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

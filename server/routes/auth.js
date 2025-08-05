@@ -4,9 +4,9 @@ const User = require("../models/User");
 
 // Signup Route
 router.post("/signup", async (req, res) => {
-  const { username, email, password, role } = req.body;
+  const { firstName, lastName, email, password, role } = req.body;
 
-  if (!username || !email || !password) {
+  if (!firstName || !lastName || !email || !password) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -14,7 +14,7 @@ router.post("/signup", async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "User already exists" });
 
-    const newUser = new User({ username, email, password, role });
+    const newUser = new User({ firstName, lastName, email, password, role });
     await newUser.save();
 
     res.status(201).json({ message: "User created successfully" });
@@ -46,6 +46,17 @@ router.post("/login", async (req, res) => {
       role: user.role,
       email: user.email
     });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+
+// Get all employees
+router.get("/employees", async (req, res) => {
+  try {
+    const employees = await User.find({ role: "employee" }, "_id firstName lastName email role");
+    res.status(200).json({ employees });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }

@@ -2,8 +2,15 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import '../style/Signup.css';
 
+
 function Signup() {
-  const [form, setForm] = useState({ username: "", email: "", password: "", role: "employee" });
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    role: "employee"
+  });
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
@@ -13,13 +20,13 @@ function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { username, email, password, role } = form;
+    const { firstName, lastName, email, password, role } = form;
 
     try {
       const res = await fetch("http://localhost:5000/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password, role }),
+        body: JSON.stringify({ firstName, lastName, email, password, role }),
       });
 
       const data = await res.json();
@@ -42,10 +49,15 @@ function Signup() {
     <div className="signup-container">
       <div className="signup-card">
         <h2 className="text-center mb-4">Signup</h2>
+
         <form onSubmit={handleSubmit}>
           <div className="form-group mb-3">
-            <label>Username</label>
-            <input type="text" name="username" className="form-control" onChange={handleChange} required />
+            <label>First Name</label>
+            <input type="text" name="firstName" className="form-control" onChange={handleChange} required />
+          </div>
+          <div className="form-group mb-3">
+            <label>Last Name</label>
+            <input type="text" name="lastName" className="form-control" onChange={handleChange} required />
           </div>
           <div className="form-group mb-3">
             <label>Email</label>

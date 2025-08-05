@@ -28,13 +28,13 @@ function Login() {
       localStorage.setItem('email', email); // Store email for UI
 
       if (role === 'employee') {
-        navigate('/home');
+        navigate('/home', { replace: true });
       } else if (role === 'senior_employee') {
-        navigate('/seniorhome');
+        navigate('/seniorhome', { replace: true });
       } else if (role === 'admin') {
-        navigate('/admin');
+        navigate('/admin', { replace: true });
       } else {
-        navigate('/home');
+        navigate('/home', { replace: true });
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
