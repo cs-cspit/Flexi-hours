@@ -18,7 +18,7 @@ function Login() {
     e.preventDefault();
     try {
       const res = await axios.post('http://localhost:5000/api/auth/login', form);
-      const { token, userId, username, role, email } = res.data;
+      const { token, userId, username, role, email, firstName } = res.data;
 
       // Store necessary info in localStorage
       localStorage.setItem('token', token);
@@ -26,6 +26,9 @@ function Login() {
       localStorage.setItem('username', username); // Store name for UI
       localStorage.setItem('role', role); // Store role for UI
       localStorage.setItem('email', email); // Store email for UI
+      if (firstName) {
+        localStorage.setItem('firstName', firstName);
+      }
 
       if (role === 'employee') {
         navigate('/home', { replace: true });

@@ -20,9 +20,10 @@ const Home = () => {
 
 
   useEffect(() => {
-    const storedName = localStorage.getItem("username");
+    // Get only the first name from localStorage (assume it's stored as 'firstName')
+    const storedFirstName = localStorage.getItem("firstName");
     const storedEmail = localStorage.getItem("email");
-    setUserName(storedName || "User");
+    setUserName(storedFirstName || "User");
     setUserEmail(storedEmail || "");
   }, []);
 
@@ -71,7 +72,7 @@ const Home = () => {
   const handleStop = () => {
     setIsRunning(false);
     setIsPaused(false);
-    setTime(0);
+    // Do not reset time here; just stop the timer
   };
 
   const handleLogout = () => {
@@ -135,7 +136,7 @@ const Home = () => {
         </nav>
 
         <div className="welcome-card">
-          <h1>Welcome back, Employee!</h1>
+          <h1>Welcome back, {userName || "Employee"}!</h1>
           <p>Track your tasks and working hours easily.</p>
 
           <div className="my-tasks-section mt-4">
