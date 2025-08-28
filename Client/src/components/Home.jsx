@@ -10,8 +10,11 @@ const Home = () => {
   const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isSessionComplete, setIsSessionComplete] = useState(false);
+  const [startTime, setStartTime] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [userName, setUserName] = useState("");
+  // userName state removed, use userEmail for worklog
+  const [stopMessage, setStopMessage] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [myTasks, setMyTasks] = useState([]);
   const navigate = useNavigate();
@@ -20,10 +23,8 @@ const Home = () => {
 
 
   useEffect(() => {
-    // Get only the first name from localStorage (assume it's stored as 'firstName')
-    const storedFirstName = localStorage.getItem("firstName");
+    // Only set userEmail for profile and worklog
     const storedEmail = localStorage.getItem("email");
-    setUserName(storedFirstName || "User");
     setUserEmail(storedEmail || "");
   }, []);
 
@@ -61,18 +62,46 @@ const Home = () => {
   }, [isRunning, isPaused]);
 
   const handleStart = () => {
+    if (isSessionComplete) return;
     setIsRunning(true);
     setIsPaused(false);
+    const now = new Date();
+    setStartTime(now);
   };
 
   const handlePause = () => {
     setIsPaused(true);
   };
 
-  const handleStop = () => {
+  const handleStop = async () => {
+    const confirmStop = window.confirm("Are you sure you want to stop and log this work session?");
+    if (!confirmStop) return;
     setIsRunning(false);
     setIsPaused(false);
-    // Do not reset time here; just stop the timer
+    if (startTime) {
+      const endTime = new Date();
+      const duration = Math.floor((endTime - startTime) / 1000); // seconds
+      const email = localStorage.getItem("email") || "";
+      try {
+        await axios.post("http://localhost:5000/api/worklogs", {
+          userId: localStorage.getItem("userId"),
+          email: email,
+          startTime,
+          endTime,
+          duration,
+          date: new Date().toLocaleDateString()
+        });
+  const successMsg = `Work session successfully logged for ${email} (${formatTime(duration)})`;
+  setStopMessage(successMsg);
+  window.alert(successMsg);
+  setIsSessionComplete(true);
+      } catch (err) {
+        setStopMessage("Failed to log work session");
+        console.error("Failed to log work session", err);
+      }
+      setStartTime(null);
+      setTimeout(() => setStopMessage(""), 4000);
+    }
   };
 
   const handleLogout = () => {
@@ -112,7 +141,7 @@ const Home = () => {
             <div className="timer-card profile-size">
               <div className="timer-display">{formatTime(time)}</div>
               <div className="button-group">
-                <button className="btn start" onClick={handleStart}>Start</button>
+                <button className="btn start" onClick={handleStart} disabled={isSessionComplete}>Start</button>
                 <button className="btn pause" onClick={handlePause}>Pause</button>
                 <button className="btn stop" onClick={handleStop}>Stop</button>
               </div>
@@ -136,8 +165,9 @@ const Home = () => {
         </nav>
 
         <div className="welcome-card">
-          <h1>Welcome back, {userName || "Employee"}!</h1>
+          <h1>Welcome back!</h1>
           <p>Track your tasks and working hours easily.</p>
+
 
           <div className="my-tasks-section mt-4">
             <h2>My Tasks</h2>
