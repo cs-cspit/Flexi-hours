@@ -1,6 +1,20 @@
+
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
+
+// Remove employee by ID (admin only)
+router.delete("/employees/:id", async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+    res.status(200).json({ message: "Employee removed successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
 
 // Signup Route
 router.post("/signup", async (req, res) => {
@@ -52,11 +66,29 @@ router.post("/login", async (req, res) => {
 });
 
 
-// Get all employees
+
+// Get all users
 router.get("/employees", async (req, res) => {
   try {
-    const employees = await User.find({ role: "employee" }, "_id firstName lastName email role");
+    const employees = await User.find({}, "_id firstName lastName email role salary");
     res.status(200).json({ employees });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Update salary for a user by ID
+router.patch("/employees/:id/salary", async (req, res) => {
+  const { salary } = req.body;
+  if (typeof salary !== 'number' || salary < 0) {
+    return res.status(400).json({ message: "Invalid salary value" });
+  }
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, { salary }, { new: true });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({ message: "Salary updated", salary: user.salary });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }

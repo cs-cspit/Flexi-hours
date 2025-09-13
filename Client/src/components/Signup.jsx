@@ -46,7 +46,8 @@ function Signup() {
   };
 
   return (
-    <div className="signup-container">
+    <div className="signup-page">
+      <div className="signup-container">
       <div className="signup-card">
         <h2 className="text-center mb-4">Signup</h2>
 
@@ -76,6 +77,7 @@ function Signup() {
         </div>
 
         {message && <div className="alert alert-info mt-3 text-center">{message}</div>}
+      </div>
       </div>
     </div>
   );

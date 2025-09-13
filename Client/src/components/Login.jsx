@@ -1,13 +1,12 @@
 // src/pages/Login.jsx
 import React, { useState } from 'react';
-import '../style/Login.css';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import Signup from './Signup';
+import '../style/Login.css';
 
 function Login() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '', role: '' });
+  const [form, setForm] = useState({ email: '', password: '', role: 'employee' });
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
@@ -17,27 +16,23 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', form);
-      const { token, userId, username, role, email, firstName } = res.data;
+      const res = await axios.post('http://localhost:5000/api/auth/login', {
+        email: form.email,
+        password: form.password,
+        role: form.role,
+      });
+      // Persist basics used across pages
+      localStorage.setItem('userId', res.data.userId);
+      localStorage.setItem('email', res.data.email || form.email);
+      localStorage.setItem('role', res.data.role || form.role);
 
-      // Store necessary info in localStorage
-      localStorage.setItem('token', token);
-      localStorage.setItem('userId', userId);
-      localStorage.setItem('username', username); // Store name for UI
-      localStorage.setItem('role', role); // Store role for UI
-      localStorage.setItem('email', email); // Store email for UI
-      if (firstName) {
-        localStorage.setItem('firstName', firstName);
-      }
-
-      if (role === 'employee') {
-        navigate('/home', { replace: true });
-      } else if (role === 'senior_employee') {
-        navigate('/seniorhome', { replace: true });
-      } else if (role === 'admin') {
-        navigate('/admin', { replace: true });
+      const role = (res.data.role || form.role || '').toLowerCase();
+      if (role === 'admin') {
+        navigate('/admin');
+      } else if (role === 'senior_employee' || role === 'senior') {
+        navigate('/SeniorHome');
       } else {
-        navigate('/home', { replace: true });
+        navigate('/home');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
@@ -45,7 +40,8 @@ function Login() {
   };
 
   return (
-    <div className="login-container">
+    <div className="login-page">
+      <div className="login-card">
       <h2 className="mb-4 text-center">Login</h2>
       {error && <div className="alert alert-danger">{error}</div>}
       <form onSubmit={handleLogin}>
@@ -74,15 +70,13 @@ function Login() {
         <div className="form-group mb-4">
           <label>Role</label>
           <select
-            className="form-control"
+            className="form-select"
             name="role"
             value={form.role}
             onChange={handleChange}
-            required
           >
-            <option value="">Select Role</option>
             <option value="employee">Employee</option>
-            <option value="senior_employee">Senior Employee</option>
+            <option value="senior_employee">Senior</option>
             <option value="admin">Admin</option>
           </select>
         </div>
@@ -91,6 +85,7 @@ function Login() {
           Don’t have an account? <a href="/signup">Signup</a>
         </p>
       </form>
+      </div>
     </div>
   );
 }

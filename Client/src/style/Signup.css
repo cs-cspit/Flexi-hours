@@ -1,13 +1,13 @@
-body {
-  background: url('/your-background.jpg') no-repeat center center fixed;
+/* Scoped background for Signup page */
+.signup-page {
+  background: url('/laptop-2838921_1920.jpg') no-repeat center center fixed;
   background-size: cover;
-  margin: 0;
-  padding: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100vw;
+  padding: 2rem;
 }
 
 .signup-container {
@@ -15,8 +15,7 @@ body {
   justify-content: center;
   align-items: center;
   width: 100%;
-  min-height: 100vh;
-  padding: 2rem;
+  padding: 0;
 }
 
 .signup-card {

@@ -176,10 +176,15 @@ const Home = () => {
             ) : (
               <div className="list-group">
                 {myTasks.map(task => (
-                  <div className="list-group-item" key={task._id}>
+                  <div className="list-group-item" key={task._id} style={{ marginBottom: '2rem' }}>
                     <div><strong>Task:</strong> {task.description}</div>
                     <div><strong>Assigned By:</strong> {task.assignedBy?.firstName} {task.assignedBy?.lastName} ({task.assignedBy?.email})</div>
                     <div><small>{new Date(task.createdAt).toLocaleString()}</small></div>
+                    <div style={{ marginTop: '1rem' }}>
+                      <label htmlFor={`file-upload-${task._id}`} style={{ marginRight: '0.5rem' }}>Upload File:</label>
+                      <input type="file" id={`file-upload-${task._id}`} name={`file-upload-${task._id}`} disabled />
+                      <span style={{ color: '#888', marginLeft: '0.5rem' }}>(Coming soon)</span>
+                    </div>
                   </div>
                 ))}
               </div>
