@@ -42,8 +42,8 @@ const Admin = () => {
         setShowDropdown(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
   const handleLogout = () => {
@@ -86,21 +86,33 @@ const Admin = () => {
   const [salaryLoading, setSalaryLoading] = useState({}); // { [userId]: boolean }
   const [salaryError, setSalaryError] = useState({}); // { [userId]: string }
   const [salarySuccess, setSalarySuccess] = useState({}); // { [userId]: string }
+  const [salaryModal, setSalaryModal] = useState({ open: false, id: null, current: 0, input: '' });
 
-  const handleSalaryChange = (id, value) => {
-    setSalaryEdit(prev => ({ ...prev, [id]: value }));
-    setSalaryError(prev => ({ ...prev, [id]: '' }));
-    setSalarySuccess(prev => ({ ...prev, [id]: '' }));
+  const openSalaryModal = (emp) => {
+    setSalaryModal({ open: true, id: emp._id, current: Number(emp.salary || 15000), input: String(emp.salary || 15000) });
+    setSalaryError(prev => ({ ...prev, [emp._id]: '' }));
+    setSalarySuccess(prev => ({ ...prev, [emp._id]: '' }));
   };
 
-  const handleSalaryUpdate = async (id) => {
+  const closeSalaryModal = () => setSalaryModal({ open: false, id: null, current: 0, input: '' });
+
+  const handleSalaryUpdate = async (id, valueStr) => {
+    const salaryVal = Number(valueStr);
+    if (!Number.isFinite(salaryVal) || salaryVal < 0) {
+      setSalaryError(prev => ({ ...prev, [id]: 'Please enter a valid non-negative number.' }));
+      return;
+    }
+    const confirmMsg = `Are you sure you want to set salary to ₹${salaryVal}?`;
+    const ok = window.confirm(confirmMsg);
+    if (!ok) return;
     setSalaryLoading(prev => ({ ...prev, [id]: true }));
     setSalaryError(prev => ({ ...prev, [id]: '' }));
     setSalarySuccess(prev => ({ ...prev, [id]: '' }));
     try {
-      await axios.patch(`http://localhost:5000/api/auth/employees/${id}/salary`, { salary: salaryEdit[id] });
-      setEmployees(prev => prev.map(emp => emp._id === id ? { ...emp, salary: salaryEdit[id] } : emp));
+      await axios.patch(`http://localhost:5000/api/auth/employees/${id}/salary`, { salary: salaryVal });
+      setEmployees(prev => prev.map(emp => emp._id === id ? { ...emp, salary: salaryVal } : emp));
       setSalarySuccess(prev => ({ ...prev, [id]: 'Salary updated!' }));
+      closeSalaryModal();
     } catch (err) {
       setSalaryError(prev => ({ ...prev, [id]: err.response?.data?.message || 'Failed to update salary.' }));
     } finally {
@@ -251,24 +263,14 @@ const Admin = () => {
                     <h5>{emp.firstName || ''} {emp.lastName || ''}</h5>
                     <p><strong>Email:</strong> {emp.email}</p>
                     <p><strong>Current Salary:</strong> ₹{emp.salary || 15000}</p>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '0.5rem' }}>New Salary:</label>
-                      <input
-                        type="number"
-                        value={salaryEdit[emp._id] || emp.salary || 15000}
-                        onChange={(e) => handleSalaryChange(emp._id, e.target.value)}
-                        className="salary-input"
-                      />
-                    </div>
-                    {salaryError[emp._id] && <p style={{ color: 'red', fontSize: '0.8rem' }}>{salaryError[emp._id]}</p>}
-                    {salarySuccess[emp._id] && <p style={{ color: 'green', fontSize: '0.8rem' }}>{salarySuccess[emp._id]}</p>}
                     <button
-                      onClick={() => handleSalaryUpdate(emp._id)}
-                      disabled={salaryLoading[emp._id]}
+                      onClick={() => openSalaryModal(emp)}
                       className="btn-success"
                     >
-                      {salaryLoading[emp._id] ? 'Updating...' : 'Update Salary'}
+                      Edit Salary
                     </button>
+                    {salaryError[emp._id] && <p style={{ color: 'red', fontSize: '0.8rem' }}>{salaryError[emp._id]}</p>}
+                    {salarySuccess[emp._id] && <p style={{ color: 'green', fontSize: '0.8rem' }}>{salarySuccess[emp._id]}</p>}
                   </div>
                 ))}
               </div>
@@ -278,12 +280,8 @@ const Admin = () => {
       </div>
       
       <div className="user-menu">
-        <div ref={dropdownRef} style={{ position: 'relative' }}>
-          <button
-            className="user-button"
-            onClick={() => setShowDropdown(!showDropdown)}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0.5rem' }}
-          >
+        <div ref={dropdownRef} style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+          <button className="user-button" onClick={() => setShowDropdown(!showDropdown)} onMouseDown={(e) => e.stopPropagation()}>
             <img src="/user.png" alt="User" style={{ width: '30px', height: '30px', borderRadius: '50%' }} />
           </button>
           {showDropdown && (
@@ -299,6 +297,30 @@ const Admin = () => {
           )}
         </div>
       </div>
+
+      {salaryModal.open && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <h3 style={{ marginTop: 0 }}>Edit Salary</h3>
+            <p style={{ marginBottom: '0.5rem' }}>Current: ₹{salaryModal.current}</p>
+            <label style={{ display: 'block', marginBottom: '0.5rem' }}>New Salary</label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={salaryModal.input}
+              onChange={(e) => setSalaryModal(m => ({ ...m, input: e.target.value }))}
+              className="salary-input"
+            />
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={closeSalaryModal}>Cancel</button>
+              <button className="btn-success" onClick={() => handleSalaryUpdate(salaryModal.id, salaryModal.input)}>
+                {salaryLoading[salaryModal.id] ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

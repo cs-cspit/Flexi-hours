@@ -143,15 +143,60 @@
   position: fixed;
   top: 20px;
   right: 20px;
+  z-index: 1500;
+}
+.admin .user-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+}
+.admin .user-button:hover {
+  background: rgba(0,0,0,0.05);
 }
 .admin .dropdown-menu {
-  position: absolute;
-  right: 0;
-  top: 100%;
+  position: fixed;
+  right: 20px;
+  top: 60px; /* below avatar */
   background: #fff;
   border: 1px solid #ccc;
-  border-radius: 4px;
-  min-width: 150px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  z-index: 1000;
+  border-radius: 8px;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  z-index: 5000;
+  pointer-events: auto;
+}
+
+/* Modal */
+.admin .modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+.admin .modal-card {
+  background: #fff;
+  width: 90%;
+  max-width: 420px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  padding: 1.5rem;
+}
+.admin .modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+.admin .btn-secondary {
+  background: #6c757d;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
 }
