@@ -2,6 +2,8 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
+const Session = require("../models/Session");
+const WorkLog = require("../models/WorkLog");
 
 // Remove employee by ID (admin only)
 router.delete("/employees/:id", async (req, res) => {
@@ -53,15 +55,68 @@ router.post("/login", async (req, res) => {
     if (role && user.role !== role) {
       return res.status(401).json({ message: "Role mismatch" });
     }
-    res.status(200).json({
-      message: "Login successful",
+    const todayStr = new Date().toLocaleDateString();
+
+    // Get today's worklogs for this user
+    const todayLogs = await WorkLog.find({ 
       userId: user._id,
-      username: user.username,
-      role: user.role,
-      email: user.email
+      date: todayStr 
+    }).sort({ startTime: 1 });
+
+    // Create/update session without enforcing single login
+    await Session.findOneAndUpdate(
+      { userId: user._id, date: todayStr },
+      { $setOnInsert: { loginAt: new Date() } },
+      { upsert: true, new: true }
+    );
+
+    // Calculate total duration and earnings if logs exist
+    let totalDuration = 0;
+    if (todayLogs.length > 0) {
+      totalDuration = todayLogs.reduce((sum, log) => sum + (Number(log.duration) || 0), 0);
+    }
+
+    res.status(200).json({ 
+      message: "Login successful", 
+      userId: user._id, 
+      username: user.username, 
+      role: user.role, 
+      email: user.email,
+      todayLogs: todayLogs,
+      totalLoggedSeconds: totalDuration
     });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Logout Route - closes today's session and writes a WorkLog
+router.post('/logout', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ message: 'userId required' });
+    const todayStr = new Date().toLocaleDateString();
+    const session = await Session.findOne({ userId, date: todayStr });
+    if (!session) return res.status(200).json({ message: 'No active session found for today' });
+    if (session.logoutAt) return res.status(200).json({ message: 'Session already closed' });
+    const logoutAt = new Date();
+    const duration = Math.max(0, Math.floor((logoutAt - session.loginAt) / 1000));
+    session.logoutAt = logoutAt;
+    session.duration = duration;
+    await session.save();
+    // also persist as a WorkLog for consistency
+    const user = await User.findById(userId);
+    await WorkLog.create({
+      userId,
+      email: user?.email || 'unknown',
+      startTime: session.loginAt,
+      endTime: logoutAt,
+      duration,
+      date: todayStr,
+    });
+    res.json({ message: 'Logged out and session recorded', duration });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to logout', error: err.message });
   }
 });
 

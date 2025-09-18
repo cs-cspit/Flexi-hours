@@ -21,10 +21,11 @@ function Login() {
         password: form.password,
         role: form.role,
       });
-      // Persist basics used across pages
+      // Persist user data and today's worklog info
       localStorage.setItem('userId', res.data.userId);
       localStorage.setItem('email', res.data.email || form.email);
       localStorage.setItem('role', res.data.role || form.role);
+      localStorage.setItem('loginResponse', JSON.stringify(res.data));
 
       const role = (res.data.role || form.role || '').toLowerCase();
       if (role === 'admin') {
