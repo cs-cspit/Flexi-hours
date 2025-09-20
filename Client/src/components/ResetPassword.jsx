@@ -1,6 +1,7 @@
 // src/pages/ResetPassword.jsx
 import React, { useState } from "react";
-import "../style/Login.css";
+import "../style/login.css";
+import "./Auth.css";
 import axios from "axios";
 
 function ResetPassword() {
@@ -21,12 +22,11 @@ function ResetPassword() {
   };
 
   return (
-    <div className="container">
-      <div className="form-box">
-        <h2 className="text-center mb-4">Forgot Password</h2>
+    <div className="container d-flex justify-content-center align-items-center min-vh-100">
+      <div className="form-box shadow p-4 rounded login-container">
+        <h2 className="mb-4 text-center">Forgot Password</h2>
         {message && <div className="alert alert-success">{message}</div>}
         {error && <div className="alert alert-danger">{error}</div>}
-
         <form onSubmit={handleReset}>
           <div className="form-group mb-3">
             <label>Email address</label>
@@ -39,11 +39,9 @@ function ResetPassword() {
               required
             />
           </div>
-
           <button type="submit" className="btn btn-primary w-100">
             Send Reset Link
           </button>
-
           <p className="mt-3 text-center">
             <a href="/login">Back to Login</a>
           </p>
