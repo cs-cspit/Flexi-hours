@@ -4,6 +4,7 @@ import Login from './components/Login';
 import Home from './components/Home';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import SeniorHome from './components/SeniorHome';
+import ResetPassword from './components/Resetpassword';
 import Admin from './components/Admin';
 
 
@@ -17,6 +18,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/home" element={<Home />} />
           <Route path="/SeniorHome" element={<SeniorHome />} />
+          <Route path="/resetpassword" element={<ResetPassword />} />
           <Route path="/admin" element={<Admin />} />
         </Routes>
       </div>
