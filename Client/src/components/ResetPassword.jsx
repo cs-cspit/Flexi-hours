@@ -1,7 +1,7 @@
 // src/pages/ResetPassword.jsx
 import React, { useState } from "react";
 import "../style/login.css";
-import "./Auth.css";
+// import "./Auth.css";
 import axios from "axios";
 
 function ResetPassword() {
