@@ -117,6 +117,10 @@ const Admin = () => {
   const [employees, setEmployees] = useState([]);
   const [worklogs, setWorklogs] = useState([]);
   const [worklogFilter, setWorklogFilter] = useState('all');
+  
+  // Idle Analytics state
+  const [idleScope, setIdleScope] = useState('today'); // 'today' | 'week' | 'month'  
+  const [idleAnalytics, setIdleAnalytics] = useState([]);
   // Remove employee handler
   const handleRemoveEmployee = async (empId, empName) => {
     const confirmRemove = window.confirm(`Are you sure you want to remove ${empName}?`);
@@ -224,7 +228,7 @@ const Admin = () => {
 
   // Fetch worklogs when worklog section is active
   useEffect(() => {
-    if (activeSection === 'worklogs') {
+    if (activeSection === 'worklogs' || activeSection === 'employees') {
       fetchWorklogs();
     }
   }, [activeSection]);
@@ -238,6 +242,87 @@ const Admin = () => {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
+
+  // Calculate idle analytics when scope changes or when on employees section
+  useEffect(() => {
+    if (activeSection === "employees" && worklogs.length > 0 && employees.length > 0) {
+      calculateIdleAnalytics();
+    }
+  }, [idleScope, worklogs, employees, activeSection]);
+
+  const calculateIdleAnalytics = () => {
+    // Get date range based on scope
+    const now = new Date();
+    let startDate;
+    
+    switch (idleScope) {
+      case 'today':
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'month':
+        startDate = new Date(now);
+        startDate.setDate(1); // First day of current month
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      default:
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+    }
+
+    // Filter worklogs by date range using startTime
+    const filteredLogs = worklogs.filter(log => {
+      if (!log.startTime) return false;
+      const logDate = new Date(log.startTime);
+      logDate.setHours(0, 0, 0, 0);
+      const nowEndOfDay = new Date(now);
+      nowEndOfDay.setHours(23, 59, 59, 999);
+      return logDate >= startDate && logDate <= nowEndOfDay;
+    });
+
+    // Group by employee
+    const employeeAnalytics = {};
+    
+    filteredLogs.forEach(log => {
+      const employee = employees.find(emp => emp._id === log.userId);
+      if (!employee) return;
+      
+      const employeeKey = employee._id;
+      const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.email;
+      
+      if (!employeeAnalytics[employeeKey]) {
+        employeeAnalytics[employeeKey] = {
+          employeeName,
+          totalWorkTime: 0,
+          totalIdleTime: 0,
+          sessions: 0
+        };
+      }
+      
+      employeeAnalytics[employeeKey].totalWorkTime += log.duration || 0;
+      employeeAnalytics[employeeKey].totalIdleTime += log.totalIdleTime || 0;
+      employeeAnalytics[employeeKey].sessions += 1;
+    });
+
+    // Convert to array and calculate percentages
+    const analyticsArray = Object.values(employeeAnalytics).map(analytics => ({
+      ...analytics,
+      idlePercentage: analytics.totalWorkTime > 0 
+        ? (analytics.totalIdleTime / analytics.totalWorkTime) * 100 
+        : 0,
+      effectiveTime: analytics.totalWorkTime - analytics.totalIdleTime
+    }));
+
+    // Sort by idle percentage (highest first)
+    analyticsArray.sort((a, b) => b.idlePercentage - a.idlePercentage);
+    
+    setIdleAnalytics(analyticsArray);
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -461,6 +546,114 @@ const Admin = () => {
         {activeSection === 'employees' && (
           <div className="employees-section">
             <h2 className="section-title">All Employees</h2>
+            
+            {/* Employee Idle Time Analytics */}
+            <div className="idle-analytics-section" style={{ marginBottom: '30px' }}>
+              <h3 style={{ marginBottom: '15px', fontSize: '1.3rem', fontWeight: 600 }}>Employee Idle Time Analytics</h3>
+              
+              {/* Scope Selector */}
+              <div className="idle-scope-selector" style={{ marginBottom: '20px' }}>
+                <span style={{ marginRight: '10px', fontWeight: 500 }}>View:</span>
+                <button 
+                  className={`scope-btn ${idleScope === 'today' ? 'active' : ''}`}
+                  onClick={() => setIdleScope('today')}
+                  style={{
+                    padding: '8px 16px',
+                    marginRight: '8px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    backgroundColor: idleScope === 'today' ? '#007bff' : '#f8f9fa',
+                    color: idleScope === 'today' ? 'white' : '#333'
+                  }}
+                >
+                  Today
+                </button>
+                <button 
+                  className={`scope-btn ${idleScope === 'week' ? 'active' : ''}`}
+                  onClick={() => setIdleScope('week')}
+                  style={{
+                    padding: '8px 16px',
+                    marginRight: '8px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    backgroundColor: idleScope === 'week' ? '#007bff' : '#f8f9fa',
+                    color: idleScope === 'week' ? 'white' : '#333'
+                  }}
+                >
+                  Last 7 Days
+                </button>
+                <button 
+                  className={`scope-btn ${idleScope === 'month' ? 'active' : ''}`}
+                  onClick={() => setIdleScope('month')}
+                  style={{
+                    padding: '8px 16px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    backgroundColor: idleScope === 'month' ? '#007bff' : '#f8f9fa',
+                    color: idleScope === 'month' ? 'white' : '#333'
+                  }}
+                >
+                  This Month
+                </button>
+              </div>
+
+              {/* Idle Analytics Table */}
+              {idleAnalytics.length === 0 ? (
+                <p style={{ 
+                  textAlign: 'center', 
+                  color: '#666', 
+                  fontSize: '0.95rem',
+                  fontStyle: 'italic',
+                  padding: '20px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '8px'
+                }}>
+                  No idle time data available for the selected period.
+                </p>
+              ) : (
+                <div className="table-container" style={{ backgroundColor: '#fff', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                  <table className="admin-table">
+                    <thead style={{ backgroundColor: '#f8f9fa' }}>
+                      <tr>
+                        <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: '#333' }}>Employee</th>
+                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Total Work Time</th>
+                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Total Idle Time</th>
+                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Idle %</th>
+                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Effective Time</th>
+                        <th style={{ padding: '12px', textAlign: 'center', fontWeight: 600, color: '#333' }}>Sessions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {idleAnalytics.map((analytics, index) => (
+                        <tr key={index} style={{ borderBottom: '1px solid #e9ecef' }}>
+                          <td style={{ padding: '12px', fontWeight: 500, color: '#333' }}>{analytics.employeeName}</td>
+                          <td style={{ padding: '12px', textAlign: 'center', fontFamily: 'monospace', color: '#495057' }}>{formatTime(analytics.totalWorkTime)}</td>
+                          <td style={{ padding: '12px', textAlign: 'center', fontFamily: 'monospace', color: '#dc3545' }}>{formatTime(analytics.totalIdleTime)}</td>
+                          <td style={{ 
+                            padding: '12px', 
+                            textAlign: 'center', 
+                            fontWeight: 600,
+                            color: analytics.idlePercentage > 20 ? '#dc3545' : analytics.idlePercentage > 10 ? '#fd7e14' : '#28a745'
+                          }}>
+                            {analytics.idlePercentage.toFixed(1)}%
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center', fontFamily: 'monospace', color: '#28a745' }}>{formatTime(analytics.effectiveTime)}</td>
+                          <td style={{ padding: '12px', textAlign: 'center', color: '#495057' }}>{analytics.sessions}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Employee List */}
             {employees.length === 0 ? (
               <p style={{ textAlign: 'center' }}>No employees found.</p>
             ) : (

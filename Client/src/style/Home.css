@@ -446,3 +446,83 @@ html, body {
 .about-row ul {
   margin: 0 0 0 1rem;
 }
+
+/* Idle Analytics Styles */
+.idle-analytics-section {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid #e8ecf1;
+}
+
+.idle-analytics-section h2 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+  font-size: 1.4rem;
+}
+
+.idle-scope-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.scope-label {
+  font-weight: 500;
+  color: #555;
+  margin-right: 0.5rem;
+}
+
+.scope-btn {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  color: #495057;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.scope-btn:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.scope-btn.active {
+  background: #3498db;
+  border-color: #3498db;
+  color: white;
+}
+
+.idle-analytics-section .table {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.idle-analytics-section .table th {
+  background: #f8f9fa;
+  border-top: none;
+  font-weight: 600;
+  color: #495057;
+  padding: 0.75rem;
+}
+
+.idle-analytics-section .table td {
+  padding: 0.75rem;
+  vertical-align: middle;
+}
+
+.text-warning {
+  color: #f39c12 !important;
+}
+
+.text-danger {
+  color: #e74c3c !important;
+}
+
+.text-success {
+  color: #27ae60 !important;
+}

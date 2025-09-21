@@ -99,6 +99,11 @@ const SeniorHome = () => {
   const [tasks, setTasks] = useState([]);
   const [worklogs, setWorklogs] = useState([]);
   const [worklogFilter, setWorklogFilter] = useState('all'); // 'all' or specific employee id
+  
+  // Idle analytics state
+  const [idleScope, setIdleScope] = useState('today'); // 'today' | 'week' | 'month'  
+  const [idleAnalytics, setIdleAnalytics] = useState([]);
+  
   const navigate = useNavigate();
   const dropdownRef = useRef();
 
@@ -152,10 +157,135 @@ const SeniorHome = () => {
   useEffect(() => {
     if (activeSection === "tasks") {
       fetchTasks();
-    } else if (activeSection === "worklogs") {
-      fetchWorklogs();
+    } else if (activeSection === "worklogs" || activeSection === "employees") {
+      fetchWorklogs(); // Fetch worklogs for both sections
     }
   }, [activeSection]);
+
+  // Calculate idle analytics when scope changes or when on employees section
+  useEffect(() => {
+    if (activeSection === "employees" && worklogs.length > 0 && employees.length > 0) {
+      calculateIdleAnalytics();
+    }
+  }, [idleScope, worklogs, employees, activeSection]);
+
+  const calculateIdleAnalytics = () => {
+    console.log('=== IDLE ANALYTICS CALCULATION START ===');
+    console.log('Current state:', {
+      activeSection,
+      idleScope,
+      worklogsCount: worklogs.length,
+      employeesCount: employees.length
+    });
+    
+    // Get date range based on scope
+    const now = new Date();
+    let startDate;
+    
+    switch (idleScope) {
+      case 'today':
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'week':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'month':
+        startDate = new Date(now);
+        startDate.setDate(1); // First day of current month
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      default:
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+    }
+
+    console.log('Date filtering debug:', {
+      timestamp: new Date().toISOString(),
+      scope: idleScope,
+      startDate: startDate.toISOString(),
+      now: now.toISOString(),
+      totalWorklogs: worklogs.length
+    });
+
+    // Filter worklogs by date range using startTime
+    const filteredLogs = worklogs.filter(log => {
+      if (!log.startTime) return false;
+      
+      const logDate = new Date(log.startTime);
+      logDate.setHours(0, 0, 0, 0); // Normalize to start of day
+      
+      const startDateStart = new Date(startDate);
+      startDateStart.setHours(0, 0, 0, 0);
+      
+      const nowEndOfDay = new Date(now);
+      nowEndOfDay.setHours(23, 59, 59, 999);
+      
+      const isInRange = logDate >= startDateStart && logDate <= nowEndOfDay;
+      
+      console.log('Log filter debug:', {
+        timestamp: new Date().toISOString(),
+        email: log.email,
+        startTime: log.startTime,
+        parsedLogDate: logDate.toISOString(),
+        startDateStart: startDateStart.toISOString(),
+        nowEndOfDay: nowEndOfDay.toISOString(),
+        isInRange,
+        idleTime: log.totalIdleTime || 0,
+        hasIdleSegments: !!(log.idleSegments && log.idleSegments.length > 0)
+      });
+      
+      return isInRange;
+    });
+
+    // Group by employee
+    const employeeAnalytics = {};
+    
+    filteredLogs.forEach(log => {
+      const employee = employees.find(emp => emp._id === log.userId);
+      if (!employee) return;
+      
+      const employeeKey = employee._id;
+      const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.email;
+      
+      if (!employeeAnalytics[employeeKey]) {
+        employeeAnalytics[employeeKey] = {
+          employeeName,
+          totalWorkTime: 0,
+          totalIdleTime: 0,
+          effectiveTime: 0,
+          sessionCount: 0
+        };
+      }
+      
+      employeeAnalytics[employeeKey].totalWorkTime += log.duration || 0;
+      employeeAnalytics[employeeKey].totalIdleTime += log.totalIdleTime || 0;
+      employeeAnalytics[employeeKey].effectiveTime += log.effectiveDuration || log.duration || 0;
+      employeeAnalytics[employeeKey].sessionCount += 1;
+    });
+
+    // Convert to array and calculate percentages
+    const analyticsArray = Object.values(employeeAnalytics).map(analytics => ({
+      ...analytics,
+      idlePercentage: analytics.totalWorkTime > 0 
+        ? (analytics.totalIdleTime / analytics.totalWorkTime) * 100 
+        : 0
+    }));
+
+    // Sort by idle percentage (highest first)
+    analyticsArray.sort((a, b) => b.idlePercentage - a.idlePercentage);
+    
+    console.log('Final idle analytics result:', {
+      filteredLogsCount: filteredLogs.length,
+      analyticsArrayCount: analyticsArray.length,
+      analyticsArray
+    });
+    console.log('=== IDLE ANALYTICS CALCULATION END ===');
+    
+    setIdleAnalytics(analyticsArray);
+  };
 
   // Get current senior's userId from localStorage (set at login)
   const seniorId = localStorage.getItem("userId");
@@ -344,6 +474,68 @@ const SeniorHome = () => {
           <div className="welcome-card">
             <h1>Welcome Senior!</h1>
             <p>Track your tasks and working hours easily.</p>
+            
+            {/* Idle Analytics Section */}
+            <div className="idle-analytics-section mt-4">
+              <h2>Employee Idle Time Analytics</h2>
+              <div className="idle-scope-selector mb-3">
+                <span className="scope-label">View: </span>
+                <button 
+                  className={`scope-btn ${idleScope === 'today' ? 'active' : ''}`}
+                  onClick={() => setIdleScope('today')}
+                >
+                  Today
+                </button>
+                <button 
+                  className={`scope-btn ${idleScope === 'week' ? 'active' : ''}`}
+                  onClick={() => setIdleScope('week')}
+                >
+                  Last 7 Days
+                </button>
+                <button 
+                  className={`scope-btn ${idleScope === 'month' ? 'active' : ''}`}
+                  onClick={() => setIdleScope('month')}
+                >
+                  This Month
+                </button>
+              </div>
+              
+              {idleAnalytics.length === 0 ? (
+                <p>No idle time data available for the selected period.</p>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-striped">
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Total Work Time</th>
+                        <th>Total Idle Time</th>
+                        <th>Idle %</th>
+                        <th>Effective Time</th>
+                        <th>Sessions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {idleAnalytics.map((analytics, index) => (
+                        <tr key={index}>
+                          <td>{analytics.employeeName}</td>
+                          <td>{formatTime(analytics.totalWorkTime)}</td>
+                          <td className={analytics.totalIdleTime > 0 ? 'text-warning' : ''}>
+                            {formatTime(analytics.totalIdleTime)}
+                          </td>
+                          <td className={analytics.idlePercentage > 20 ? 'text-danger' : analytics.idlePercentage > 10 ? 'text-warning' : 'text-success'}>
+                            {analytics.idlePercentage.toFixed(1)}%
+                          </td>
+                          <td className="text-success">{formatTime(analytics.effectiveTime)}</td>
+                          <td>{analytics.sessionCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            
             <div className="employees-section mt-4">
               <h2>All Employees</h2>
               {employees.length === 0 ? (

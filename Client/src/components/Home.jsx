@@ -14,6 +14,8 @@ import {
 } from "chart.js";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import "../style/Home.css";
 import { useIdleTimer } from "../hooks/useIdleTimer";
 
@@ -44,6 +46,7 @@ const Home = () => {
   const [dailyRate, setDailyRate] = useState(0);
   const [roundedMinutes, setRoundedMinutes] = useState(0);
   const [todaysEarning, setTodaysEarning] = useState(0);
+  const [monthlyTotalEarnings, setMonthlyTotalEarnings] = useState(0);
   const [hasTodayWorklog, setHasTodayWorklog] = useState(false);
   const [todayLoggedSeconds, setTodayLoggedSeconds] = useState(0);
   const [todayLogs, setTodayLogs] = useState([]);
@@ -53,6 +56,8 @@ const Home = () => {
   const [allMyWorklogs, setAllMyWorklogs] = useState([]);
   const [isLoadingWorklogs, setIsLoadingWorklogs] = useState(false);
   const [showIdlePopup, setShowIdlePopup] = useState(false);
+  const [idleSegments, setIdleSegments] = useState([]); // Track all idle periods in current session
+  const [currentIdleStart, setCurrentIdleStart] = useState(null);
 
   const navigate = useNavigate();
   const dropdownRef = useRef();
@@ -102,6 +107,46 @@ const Home = () => {
       setHasTodayWorklog(false);
       setTodayLoggedSeconds(0);
       setTodayLogs([]);
+    }
+  };
+
+  const fetchMonthlyTotalEarnings = async () => {
+    const userId = localStorage.getItem("userId");
+    const email = localStorage.getItem("email");
+    if (!userId || !email) return;
+
+    try {
+      // Fetch all worklogs
+      const response = await axios.get("http://localhost:5000/api/worklogs");
+      const allLogs = response.data.logs || [];
+      
+      // Filter for current month and current user
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      
+      const monthlyLogs = allLogs.filter(log => {
+        const logDate = new Date(log.startTime);
+        return logDate.getMonth() === currentMonth && 
+               logDate.getFullYear() === currentYear &&
+               (log.userId === userId || log.email === email);
+      });
+      
+      // Calculate total monthly earnings based on the same logic as daily earnings
+      let totalMonthlyEarnings = 0;
+      
+      monthlyLogs.forEach(log => {
+        const minutesFloat = (log.duration || 0) / 60;
+        const rounded = Math.ceil(minutesFloat / 5) * 5; // Round to nearest 5 minutes
+        const perMinute = dailyRate / (8 * 60);
+        const logEarning = Math.min(dailyRate, perMinute * rounded);
+        totalMonthlyEarnings += logEarning;
+      });
+      
+      setMonthlyTotalEarnings(totalMonthlyEarnings);
+      
+    } catch (err) {
+      console.error("Failed to fetch monthly earnings:", err);
+      setMonthlyTotalEarnings(0);
     }
   };
 
@@ -178,6 +223,13 @@ const Home = () => {
       });
   }, []);
 
+  // Fetch monthly total earnings when dailyRate changes
+  useEffect(() => {
+    if (dailyRate > 0) {
+      fetchMonthlyTotalEarnings();
+    }
+  }, [dailyRate]);
+
   // Generate monthly earnings data
   useEffect(() => {
     const generateMonthlyData = () => {
@@ -238,6 +290,8 @@ const Home = () => {
     thresholdMs: 30000,
     pollMs: 1000,
     onIdle: () => {
+      // Record idle start time
+      setCurrentIdleStart(new Date());
       // Auto pause when idle detected
       setIsPaused(true);
       setShowIdlePopup(true);
@@ -245,9 +299,40 @@ const Home = () => {
   });
 
   const handleResumeAfterIdle = () => {
+    // Record idle segment if we have a start time
+    if (currentIdleStart) {
+      const idleEnd = new Date();
+      const idleDuration = idleEnd - currentIdleStart;
+      const newIdleSegment = {
+        start: currentIdleStart,
+        end: idleEnd,
+        duration: idleDuration
+      };
+      setIdleSegments(prev => [...prev, newIdleSegment]);
+      setCurrentIdleStart(null);
+    }
+    
     setIsPaused(false);
     setShowIdlePopup(false);
     resetIdle();
+  };
+
+  const handleDismissIdle = () => {
+    // Record idle segment if we have a start time (user dismissed, timer stays paused)
+    if (currentIdleStart) {
+      const idleEnd = new Date();
+      const idleDuration = idleEnd - currentIdleStart;
+      const newIdleSegment = {
+        start: currentIdleStart,
+        end: idleEnd,
+        duration: idleDuration
+      };
+      setIdleSegments(prev => [...prev, newIdleSegment]);
+      setCurrentIdleStart(null);
+    }
+    
+    setShowIdlePopup(false);
+    // Keep isPaused true since user dismissed rather than resumed
   };
 
   // Earnings if no worklog
@@ -276,6 +361,11 @@ const Home = () => {
     const endTime = new Date();
     const duration = Math.floor((endTime - startTime) / 1000);
     const email = localStorage.getItem("email") || "";
+    
+    // Calculate total idle time
+    const totalIdleTimeMs = idleSegments.reduce((total, segment) => total + segment.duration, 0);
+    const totalIdleTime = Math.floor(totalIdleTimeMs / 1000);
+    
     try {
       await axios.post("http://localhost:5000/api/worklogs", {
         userId: localStorage.getItem("userId"),
@@ -283,7 +373,11 @@ const Home = () => {
         startTime,
         endTime,
         duration,
-        date: new Date().toLocaleDateString(),
+        idleSegments: idleSegments.map(segment => ({
+          start: segment.start,
+          end: segment.end,
+          duration: Math.floor(segment.duration / 1000) // Convert to seconds
+        }))
       });
       if (!silent) {
         const msg = `Work session logged for ${email} (${formatTime(
@@ -292,10 +386,14 @@ const Home = () => {
         setStopMessage(msg);
         window.alert(msg);
       }
+      
+      // Reset session and idle data
       setIsSessionComplete(true);
       setStartTime(null);
       setIsRunning(false);
       setIsPaused(false);
+      setIdleSegments([]);
+      setCurrentIdleStart(null);
       setTimeout(() => setStopMessage(""), 4000);
       return { logged: true };
     } catch (err) {
@@ -321,6 +419,268 @@ const Home = () => {
     if (startTime) await logCurrentSession({ silent: true });
     localStorage.clear();
     navigate("/login");
+  };
+
+  // Generate Monthly Invoice
+  const generateInvoice = async () => {
+    try {
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const monthName = new Date(0, currentMonth).toLocaleString('en', { month: 'long' });
+      const userEmail = localStorage.getItem("email");
+      const userId = localStorage.getItem("userId");
+      
+      // Fetch current month's worklogs
+      const response = await axios.get("http://localhost:5000/api/worklogs");
+      const allLogs = response.data.logs || [];
+      
+      // Filter logs for current month and user
+      const monthlyLogs = allLogs.filter(log => {
+        const logDate = new Date(log.startTime);
+        return logDate.getMonth() === currentMonth && 
+               logDate.getFullYear() === currentYear &&
+               (log.userId === userId || log.email === userEmail);
+      });
+      
+      if (monthlyLogs.length === 0) {
+        alert("No work logs found for the current month!");
+        return;
+      }
+      
+      // Calculate totals
+      const totalWorkTime = monthlyLogs.reduce((sum, log) => sum + (log.duration || 0), 0);
+      const totalIdleTime = monthlyLogs.reduce((sum, log) => sum + (log.totalIdleTime || 0), 0);
+      const effectiveWorkTime = totalWorkTime - totalIdleTime;
+      const totalSessions = monthlyLogs.length;
+      const averageSessionTime = totalWorkTime / totalSessions;
+      
+      // Fetch employee details
+      const employeeResponse = await axios.get("http://localhost:5000/api/auth/employees");
+      const employees = employeeResponse.data.employees || [];
+      const employee = employees.find(emp => emp._id === userId || emp.email === userEmail);
+      const employeeName = employee ? `${employee.firstName || ''} ${employee.lastName || ''}`.trim() : userEmail;
+      const monthlySalaryAmount = employee?.salary || monthlySalary;
+      
+      // Use the existing monthly total earnings from the UI (which shows ₹10)
+      const totalEarnings = monthlyTotalEarnings;
+      
+      // Create PDF with A4 dimensions and margins
+      const doc = new jsPDF('portrait', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+      const margin = 15;
+      const contentWidth = pageWidth - (2 * margin);
+      
+      // Professional Header
+      doc.setFillColor(41, 128, 185); // Professional blue
+      doc.rect(0, 0, pageWidth, 45, 'F');
+      
+      // Company Logo Area (if you have a logo, you can add it here)
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text('FlexiHours', margin, 20);
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Work Management System', margin, 30);
+      
+      // Invoice Title
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('MONTHLY INVOICE', pageWidth - margin, 25, { align: 'right' });
+      
+      // Reset to default colors
+      doc.setTextColor(51, 51, 51);
+      let yPos = 60;
+      
+      // Invoice Information Section
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const invoiceDate = new Date().toLocaleDateString('en-IN');
+      const invoiceNumber = `INV-${userId.slice(-6).toUpperCase()}-${String(currentMonth + 1).padStart(2, '0')}${currentYear}`;
+      
+      doc.text(`Invoice Date: ${invoiceDate}`, margin, yPos);
+      doc.text(`Invoice Number: ${invoiceNumber}`, pageWidth - margin, yPos, { align: 'right' });
+      yPos += 10;
+      doc.text(`Period: ${monthName} ${currentYear}`, margin, yPos);
+      doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, pageWidth - margin, yPos, { align: 'right' });
+      yPos += 20;
+      
+      // Employee Information Table (better formatting)
+      const employeeData = [
+        ['Name', employeeName],
+        ['Email', userEmail],
+        ['Employee ID', userId.slice(-8).toUpperCase()],
+        ['Monthly Salary', `₹${monthlySalaryAmount.toLocaleString('en-IN')}`]
+      ];
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(41, 128, 185);
+      doc.text('EMPLOYEE DETAILS', margin, yPos);
+      
+      autoTable(doc, {
+        startY: yPos + 5,
+        head: [['Field', 'Details']],
+        body: employeeData,
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [41, 128, 185],
+          textColor: 255,
+          fontSize: 10,
+          fontStyle: 'bold'
+        },
+        bodyStyles: { 
+          fontSize: 9,
+          textColor: [51, 51, 51]
+        },
+        columnStyles: { 
+          0: { fontStyle: 'bold', cellWidth: 'auto' },
+          1: { cellWidth: 'auto' }
+        },
+        margin: { left: margin, right: margin },
+        alternateRowStyles: { fillColor: [248, 249, 250] },
+        tableWidth: 'auto'
+      });
+      
+      yPos = doc.lastAutoTable.finalY + 15;
+      
+      // Work Summary Table
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(41, 128, 185);
+      doc.text('WORK PERFORMANCE SUMMARY', margin, yPos);
+      yPos += 5;
+      
+      const summaryData = [
+        ['Total Work Sessions', totalSessions.toString()],
+        ['Total Work Time', `${Math.floor(totalWorkTime / 3600)}h ${Math.floor((totalWorkTime % 3600) / 60)}m`],
+        ['Total Idle Time', `${Math.floor(totalIdleTime / 3600)}h ${Math.floor((totalIdleTime % 3600) / 60)}m`],
+        ['Effective Work Time', `${Math.floor(effectiveWorkTime / 3600)}h ${Math.floor((effectiveWorkTime % 3600) / 60)}m`],
+        ['Average Session', `${Math.floor(averageSessionTime / 3600)}h ${Math.floor((averageSessionTime % 3600) / 60)}m`],
+        ['Work Efficiency', `${totalWorkTime > 0 ? ((effectiveWorkTime / totalWorkTime) * 100).toFixed(1) : 0}%`],
+        ['Daily Rate', `₹${(monthlySalaryAmount / 30).toLocaleString('en-IN', {maximumFractionDigits: 2})}`],
+        ['Hourly Rate', `₹${((monthlySalaryAmount / 30) / 8).toLocaleString('en-IN', {maximumFractionDigits: 2})}`]
+      ];
+      
+      autoTable(doc, {
+        startY: yPos + 5,
+        head: [['Performance Metric', 'Value']],
+        body: summaryData,
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [41, 128, 185],
+          textColor: 255,
+          fontSize: 11,
+          fontStyle: 'bold',
+          halign: 'left'
+        },
+        bodyStyles: { 
+          fontSize: 10,
+          textColor: [51, 51, 51]
+        },
+        columnStyles: { 
+          0: { fontStyle: 'bold', cellWidth: 'auto' },
+          1: { halign: 'center', cellWidth: 'auto' }
+        },
+        margin: { left: margin, right: margin },
+        alternateRowStyles: { fillColor: [248, 249, 250] },
+        tableWidth: 'auto'
+      });
+      
+      yPos = doc.lastAutoTable.finalY + 15;
+      
+      // Detailed Work Sessions (if space allows)
+      if (yPos < pageHeight - 80 && monthlyLogs.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(41, 128, 185);
+        doc.text('DETAILED WORK SESSIONS', margin, yPos);
+        yPos += 5;
+        
+        // Sort logs by date (most recent first) and limit
+        const sortedLogs = monthlyLogs
+          .sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
+          .slice(0, 15); // Show up to 15 recent entries
+        
+        const logData = sortedLogs.map((log, index) => {
+          const sessionDuration = log.duration || 0;
+          const sessionIdleTime = log.totalIdleTime || 0;
+          const roundedMinutes = Math.round(sessionDuration / 60 / 5) * 5;
+          const sessionDailyRate = monthlySalaryAmount / 30;
+          const sessionEarnings = (roundedMinutes / (8 * 60)) * sessionDailyRate;
+          const cappedEarnings = Math.min(sessionEarnings, sessionDailyRate);
+          
+          return [
+            new Date(log.startTime).toLocaleDateString('en-IN'),
+            new Date(log.startTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+            log.endTime ? new Date(log.endTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Ongoing',
+            `${Math.floor(sessionDuration / 60)}min`,
+            `${Math.floor(sessionIdleTime / 60)}min`,
+            `₹${cappedEarnings.toFixed(0)}`
+          ];
+        });
+        
+        autoTable(doc, {
+          startY: yPos + 5,
+          head: [['Date', 'Start Time', 'End Time', 'Duration', 'Idle', 'Earnings']],
+          body: logData,
+          theme: 'striped',
+          headStyles: { 
+            fillColor: [52, 152, 219],
+            textColor: 255,
+            fontSize: 9,
+            fontStyle: 'bold'
+          },
+          bodyStyles: { 
+            fontSize: 8,
+            textColor: [51, 51, 51]
+          },
+          columnStyles: {
+            0: { cellWidth: 30 },
+            1: { cellWidth: 30 },
+            2: { cellWidth: 30 },
+            3: { cellWidth: 25, halign: 'center' },
+            4: { cellWidth: 25, halign: 'center' },
+            5: { cellWidth: 30, halign: 'right' }
+          },
+          margin: { left: margin, right: margin },
+          alternateRowStyles: { fillColor: [252, 252, 252] }
+        });
+        
+        yPos = doc.lastAutoTable.finalY;
+      }
+      
+      // Earnings Summary Box (always at bottom)
+      const earningsBoxHeight = 25;
+      const earningsY = pageHeight - 40;
+      
+      doc.setFillColor(46, 204, 113); // Green background
+      doc.rect(margin, earningsY - 5, contentWidth, earningsBoxHeight, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TOTAL MONTHLY EARNINGS', margin + 5, earningsY + 5);
+      doc.text(`₹${Math.round(totalEarnings).toLocaleString('en-IN')}`, pageWidth - margin - 5, earningsY + 5, { align: 'right' });
+      
+      // Footer
+      doc.setTextColor(120, 120, 120);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.text('This is a computer-generated invoice from FlexiHours Work Management System', pageWidth/2, pageHeight - 10, { align: 'center' });
+      
+      // Save with professional filename
+      const fileName = `FlexiHours_Invoice_${employeeName.replace(/\s+/g, '_')}_${monthName}_${currentYear}.pdf`;
+      doc.save(fileName);
+      
+      alert(`✅ Professional Invoice Generated!\n\nFile: ${fileName}\nTotal Earnings: ₹${Math.round(totalEarnings).toLocaleString('en-IN')}\nSessions: ${totalSessions}`);
+      
+    } catch (error) {
+      console.error("Error generating invoice:", error);
+      alert("❌ Failed to generate invoice. Please check console for details.");
+    }
   };
 
   const formatTime = (secs) => {
@@ -369,7 +729,7 @@ const Home = () => {
             <div style={{fontWeight:600, marginBottom:'6px', color:'#614700'}}>Inactivity Detected</div>
             <div style={{fontSize:'0.9rem', lineHeight:1.4, marginBottom:'10px'}}>Timer paused after 30s of no activity. Resume to continue tracking.</div>
             <div style={{display:'flex', gap:'8px', justifyContent:'flex-end'}}>
-              <button onClick={() => setShowIdlePopup(false)} style={{background:'transparent', border:'none', color:'#614700', cursor:'pointer', fontSize:'0.85rem'}}>Dismiss</button>
+              <button onClick={handleDismissIdle} style={{background:'transparent', border:'none', color:'#614700', cursor:'pointer', fontSize:'0.85rem'}}>Dismiss</button>
               <button onClick={handleResumeAfterIdle} style={{background:'#27ae60', color:'#fff', border:'none', borderRadius:'6px', padding:'6px 12px', cursor:'pointer', fontSize:'0.85rem'}}>Resume</button>
             </div>
           </div>
@@ -505,6 +865,9 @@ const Home = () => {
                 <div>
                   <strong>Earning Today:</strong> ₹{Math.round(todaysEarning)}
                 </div>
+                <div>
+                  <strong>Total This Month:</strong> ₹{Math.round(monthlyTotalEarnings)}
+                </div>
               </div>
             </div>
 
@@ -636,6 +999,52 @@ const Home = () => {
                   }}
                 />
               </div>
+            </div>
+
+            {/* Generate Invoice Button */}
+            <div style={{
+              background: '#fff',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              marginTop: '1.5rem',
+              textAlign: 'center'
+            }}>
+              <h3 style={{ marginBottom: '1rem', color: '#2c3e50' }}>Monthly Invoice</h3>
+              <p style={{ 
+                marginBottom: '1.5rem', 
+                color: '#7f8c8d',
+                fontSize: '0.95rem' 
+              }}>
+                Generate a detailed PDF invoice for current month's work hours, idle time, and earnings
+              </p>
+              <button
+                onClick={generateInvoice}
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '25px',
+                  padding: '12px 30px',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                  transition: 'all 0.3s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+                }}
+              >
+                📄 Generate Invoice
+              </button>
             </div>
           </div>
         )}

@@ -16,20 +16,25 @@ router.get('/', async (req, res) => {
 // Add a work log (creates collection if not exists)
 router.post('/', async (req, res) => {
   try {
-    const { userId, email, startTime, endTime, duration, date } = req.body;
-    // Normalize incoming date: if provided use it, else derive from startTime or now.
-    const baseDate = date
-      ? new Date(date)
-      : startTime
-        ? new Date(startTime)
-        : new Date();
-    // ISO (yyyy-mm-dd) for stable storage & filtering
-    const isoDate = baseDate.toISOString().slice(0, 10);
-    // dd/mm/yyyy for display convenience (still stored in existing `date` field for backward compatibility)
-    const displayDate = `${String(baseDate.getDate()).padStart(2,'0')}/${String(baseDate.getMonth()+1).padStart(2,'0')}/${baseDate.getFullYear()}`;
+    const { userId, email, startTime, endTime, duration, idleSegments = [] } = req.body;
 
-    // Keep original schema property `date` but store display format; also attach isoDate in an extensible way if schema has flexible fields.
-    const log = new WorkLog({ userId, email, startTime, endTime, duration, date: displayDate, isoDate });
+    // Calculate idle metrics
+    const totalIdleTime = idleSegments.reduce((sum, segment) => {
+      return sum + (segment.duration || 0);
+    }, 0);
+    const effectiveDuration = duration - totalIdleTime;
+
+    // Create worklog with just the essential data - use startTime for all date operations
+    const log = new WorkLog({ 
+      userId, 
+      email, 
+      startTime, 
+      endTime, 
+      duration, 
+      idleSegments,
+      totalIdleTime,
+      effectiveDuration
+    });
     await log.save();
     res.status(201).json({ message: 'Work log saved', log });
   } catch (err) {
@@ -57,17 +62,19 @@ router.get('/:userId/today', async (req, res) => {
   try {
     const { userId } = req.params;
     const { email } = req.query; // Get email from query params
+    // Get today's date range using startTime
     const today = new Date();
-    const isoToday = today.toISOString().slice(0, 10);
-    const displayToday = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth()+1).padStart(2,'0')}/${today.getFullYear()}`;
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
 
-    // Support both legacy `date` field (mixed locale) and new `isoDate` / display format
+    // Filter by startTime range instead of problematic date fields
     const logs = await WorkLog.find({
-      $or: [
-        { isoDate: isoToday }, // new style
-        { date: displayToday }, // new display format
-        { date: today.toLocaleDateString() } // legacy fallback
-      ],
+      startTime: {
+        $gte: startOfDay.toISOString(),
+        $lte: endOfDay.toISOString()
+      },
       $or: [
         { userId, email },
         { email }

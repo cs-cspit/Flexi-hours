@@ -55,7 +55,7 @@ router.post("/login", async (req, res) => {
     if (role && user.role !== role) {
       return res.status(401).json({ message: "Role mismatch" });
     }
-    const todayStr = new Date().toLocaleDateString();
+    const todayStr = new Date().toLocaleDateString('en-GB'); // Force dd/mm/yyyy format
 
     // Get today's worklogs for this user
     const todayLogs = await WorkLog.find({ 
@@ -95,7 +95,7 @@ router.post('/logout', async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ message: 'userId required' });
-    const todayStr = new Date().toLocaleDateString();
+    const todayStr = new Date().toLocaleDateString('en-GB'); // Force dd/mm/yyyy format
     const session = await Session.findOne({ userId, date: todayStr });
     if (!session) return res.status(200).json({ message: 'No active session found for today' });
     if (session.logoutAt) return res.status(200).json({ message: 'Session already closed' });
